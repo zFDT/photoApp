@@ -11,6 +11,15 @@ cmake_minimum_required(VERSION 3.22.1)
 # build script scope).
 project("fdtphotoapp")
 
+# CMake 中 set 用于定义变量，这里用于存放项目中所有 C++ 源文件
+set(SRC_FILES
+        # List C/C++ source files with relative paths to this CMakeLists.txt.
+        native-lib.cpp
+        cv/CvLoader.cpp)
+set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/opencv-mobile-4.10.0-android/sdk/native/jni)
+# CMake 中的 find_package 用于查找 OpenCV 库
+find_package(OpenCV REQUIRED)
+
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
@@ -26,12 +35,17 @@ project("fdtphotoapp")
 # used in the AndroidManifest.xml file.
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
-        native-lib.cpp)
+        ${SRC_FILES})
 
 # Specifies libraries CMake should link to your target library. You
 # can link libraries from various origins, such as libraries defined in this
 # build script, prebuilt third-party libraries, or Android system libraries.
+
+# 链接 Android 的系统库，处理 Bitmap 需要加上 jnigraphics 库
+# log 库顾名思义，用于在 C++ 层处理日志的输出
 target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
         android
-        log)
+        log
+        jnigraphics
+        ${OpenCV_LIBS})
