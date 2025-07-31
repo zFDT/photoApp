@@ -1,0 +1,16 @@
+# PyTorch到TensorFlow Lite转换所需的依赖库
+
+# 核心深度学习框架
+torch>=1.9.0
+torchvision>=0.10.0
+
+# ONNX相关
+onnx>=1.10.0
+onnx-tf>=1.9.0
+
+# TensorFlow
+tensorflow>=2.8.0
+
+# 其他工具库
+numpy>=1.21.0
+protobuf>=3.19.0,<4.0.0

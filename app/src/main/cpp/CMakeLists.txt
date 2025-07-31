@@ -11,6 +11,32 @@ cmake_minimum_required(VERSION 3.22.1)
 # build script scope).
 project("fdtphotoapp")
 
+
+# tensorflow-lite-2.16.1 的配置
+# 包含头文件
+set(TFLite_ROOT ${CMAKE_SOURCE_DIR}/lib/tensorflow-lite-2.16.1)
+include_directories(${TFLite_ROOT}/headers)
+
+# 设置 so 库的路径
+if (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "armeabi-v7a")
+    set(TFLite_LIB_DIR ${TFLite_ROOT}/jni/armeabi-v7a)
+elseif (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a")
+    set(TFLite_LIB_DIR ${TFLite_ROOT}/jni/arm64-v8a)
+elseif (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86")
+    set(TFLite_LIB_DIR ${TFLite_ROOT}/jni/x86)
+elseif (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
+    set(TFLite_LIB_DIR ${TFLite_ROOT}/jni/x86_64)
+else()
+    message(FATAL_ERROR "Unsupported ABI: ${ANDROID_ABI}")
+endif()
+
+# 引入 TFLite 的 so 库
+add_library(tflite SHARED IMPORTED)
+set_target_properties(tflite PROPERTIES IMPORTED_LOCATION ${TFLite_LIB_DIR}/libtensorflowlite_jni.so)
+
+
+
+
 # CMake 中 set 用于定义变量，这里用于存放项目中所有 C++ 源文件
 set(SRC_FILES
         # List C/C++ source files with relative paths to this CMakeLists.txt.
@@ -48,4 +74,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         android
         log
         jnigraphics
+        tflite
         ${OpenCV_LIBS})
