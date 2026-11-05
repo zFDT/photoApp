@@ -508,13 +508,20 @@ class TensorFlow转换器:
         # 构建模型
         inputs = tf.keras.Input(shape=tf_input_shape, name='input')
         
-        # 检查是否为分割模型
-        is_segmentation = len(output_spec) == 3 and output_spec[0] == output_spec[1]
+        # 修复分割模型判断逻辑
+        # 对于PyTorch格式的输出 (C, H, W)，如果H和W相等且都较大，则为分割模型
+        is_segmentation = (len(output_spec) == 3 and 
+                          output_spec[1] == output_spec[2] and 
+                          output_spec[1] >= 128)  # 分割模型通常输出尺寸较大
+        
+        print(f"   模型类型判断: 输出规格={output_spec}, 是否分割={is_segmentation}")
         
         if is_segmentation:
             # 分割模型架构
-            num_classes = output_spec[2]  # TF格式: (H, W, C)
-            target_size = (output_spec[0], output_spec[1])
+            num_classes = output_spec[0]  # PyTorch格式: (C, H, W) -> C是类别数
+            target_size = (output_spec[1], output_spec[2])  # (H, W)
+            
+            print(f"   构建分割模型: {num_classes}类别, 输出尺寸{target_size}")
             
             # 编码器
             x = tf.keras.layers.Conv2D(64, 7, strides=2, padding='same', activation='relu', name='conv1')(inputs)
@@ -542,13 +549,17 @@ class TensorFlow转换器:
             # 输出层
             outputs = tf.keras.layers.Conv2D(num_classes, 1, padding='same', name='output_conv')(x)
             
-            # 确保输出尺寸正确
+            # 确保输出尺寸正确 - 需要匹配目标尺寸
+            current_size = tf.shape(outputs)[1:3]  # 获取当前的H,W
             if target_size != (tf_input_shape[0], tf_input_shape[1]):
+                print(f"   调整输出尺寸: 当前模型输出需要调整到{target_size}")
                 outputs = tf.keras.layers.Resizing(target_size[0], target_size[1], name='resize_output')(outputs)
-                
+            
         else:
             # 分类模型架构
             num_classes = output_spec[0] if len(output_spec) == 1 else output_spec[-1]
+            
+            print(f"   构建分类模型: {num_classes}类别")
             
             x = tf.keras.layers.Conv2D(64, 3, padding='same', activation='relu', name='conv1')(inputs)
             x = tf.keras.layers.Conv2D(128, 3, padding='same', activation='relu', name='conv2')(x)
@@ -732,12 +743,17 @@ class TensorFlow转换器:
         
         inputs = tf.keras.Input(shape=input_shape, name='input')
         
-        # 检查是否为分割模型
-        is_segmentation = len(output_shape) == 3 and output_shape[0] == output_shape[1]
+        # 修复简化模型的分割判断逻辑
+        is_segmentation = (len(output_shape) == 3 and 
+                          output_shape[0] == output_shape[1] and 
+                          output_shape[0] >= 128)
         
         if is_segmentation:
             # 简化的分割模型
             num_classes = output_shape[2]  # TF格式: (H, W, C)
+            target_size = output_shape[:2]  # (H, W)
+            
+            print(f"   简化分割模型: {num_classes}类别, 目标尺寸{target_size}")
             
             # 简单的编码-解码结构
             x = tf.keras.layers.Conv2D(32, 3, padding='same', activation='relu')(inputs)
@@ -752,13 +768,14 @@ class TensorFlow转换器:
             outputs = tf.keras.layers.Conv2D(num_classes, 1, padding='same')(x)
             
             # 确保输出尺寸正确
-            target_size = output_shape[:2]  # (H, W)
             current_size = (inputs.shape[1], inputs.shape[2])
             if target_size != current_size:
                 outputs = tf.keras.layers.Resizing(target_size[0], target_size[1])(outputs)
         else:
             # 简化的分类模型
             num_classes = output_shape[0] if len(output_shape) == 1 else output_shape[-1]
+            
+            print(f"   简化分类模型: {num_classes}类别")
             
             x = tf.keras.layers.Conv2D(32, 3, padding='same', activation='relu')(inputs)
             x = tf.keras.layers.GlobalAveragePooling2D()(x)
